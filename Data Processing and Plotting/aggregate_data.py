@@ -90,7 +90,7 @@ def confid(s3, m3):
 
 
 # ==========================================
-# 1. Figure 1 Data Extraction
+# 1. Figure 3 Data Extraction
 # ==========================================
 print("Processing Figure 1 data...")
 w_fig1 = 0.4
