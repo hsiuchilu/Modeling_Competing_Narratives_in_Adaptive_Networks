@@ -11,8 +11,8 @@ Narrative coding
 The original code used 0/1 internally. To preserve compatibility with earlier
 simulation output, this version keeps that coding:
 
-    narrative = 1  -> narrative A
-    narrative = 0  -> narrative B
+    narrative = 1 -> narrative A
+    narrative = 0 -> narrative B
 
 The functions therefore accept integer narrative labels {0, 1}, while comments and
 variable names use the manuscript terminology.
@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import math
 import random
-from typing import Iterable, List, Sequence, Tuple
+from typing import List, Sequence, Tuple
 
 import networkx as nx
 import numpy as np
@@ -39,13 +39,18 @@ def opposite_narrative(narrative: int) -> int:
     return 1 - narrative
 
 
-def opinion_climate(spreader: int, Q: np.ndarray, network: nx.Graph, narrative: int) -> float:
+def opinion_climate(
+    spreader: int,
+    Q: np.ndarray,
+    network: nx.Graph,
+    narrative: int,
+) -> float:
     """
     Calculate the local opinion climate surrounding the current spreader.
 
     The opinion climate is the balance between neighbors who currently support the
-    focal narrative and neighbors who support the competing narrative. It follows the
-    manuscript's supplemental definition:
+    focal narrative and neighbors who support the competing narrative. It follows
+    the manuscript's supplemental definition:
 
         delta_i = (n_supportive - n_opposing) / (n_supportive + n_opposing)
 
@@ -74,6 +79,7 @@ def opinion_climate(spreader: int, Q: np.ndarray, network: nx.Graph, narrative: 
         an opposing local climate.
     """
     neighbors = list(network.neighbors(spreader))
+
     if len(neighbors) == 0:
         raw_climate = 0.0
     else:
@@ -84,9 +90,12 @@ def opinion_climate(spreader: int, Q: np.ndarray, network: nx.Graph, narrative: 
         if n_supportive + n_opposing == 0:
             raw_climate = 0.0
         else:
-            raw_climate = (n_supportive - n_opposing) / (n_supportive + n_opposing)
+            raw_climate = (n_supportive - n_opposing) / (
+                n_supportive + n_opposing
+            )
 
-    # Manuscript supplement: I_i = l((1 + exp(-k delta_i))^-1 - 1/2), with k=5, l=2.
+    # Manuscript supplement: I_i = l((1 + exp(-k delta_i))^-1 - 1/2),
+    # with k=5 and l=2.
     return 2 * ((1 + math.exp(-5 * raw_climate)) ** -1 - 0.5)
 
 
@@ -96,9 +105,11 @@ def adoption_probability(conviction: float, b: float = 3.5) -> float:
 
     The input is the receiver's bounded conviction toward the focal narrative. In the
     simulation, raw Q values are transformed using tanh before entering this function,
-    so conviction is typically in [-1, 1]. The parameter b corresponds to b1 in the
-    manuscript: the hardness/softness of the softmax-like acceptance function and the
-    operationalized level of collective attention.
+    so conviction is typically in [-1, 1].
+
+    The parameter b corresponds to b1 in the manuscript: the hardness/softness of
+    the softmax-like acceptance function and the operationalized level of collective
+    attention.
     """
     return math.exp(b * conviction) / (math.exp(b * 1) + math.exp(b * -1))
 
@@ -114,8 +125,9 @@ def disconnection_probability(
     Parameters
     ----------
     conviction_distance : float
-        Absolute difference in bounded conviction, |Delta Q_receiver - Delta Q_spreader|.
-        With tanh-transformed Q values, the theoretical range is [0, 4].
+        Absolute difference in bounded conviction,
+        |Delta Q_receiver - Delta Q_spreader|. With tanh-transformed Q values,
+        the theoretical range is [0, 4].
     w : float
         Network adaptability. Higher values make rewiring more frequent.
     b : float
@@ -140,6 +152,7 @@ def _choose_friend_of_friend(
     """
     direct_neighbors = set(network.neighbors(node))
     candidates = set()
+
     for neighbor in direct_neighbors:
         candidates.update(network.neighbors(neighbor))
 
@@ -155,12 +168,13 @@ def _choose_friend_of_friend(
         [Q_tanh[j, NARRATIVE_A] - Q_tanh[j, NARRATIVE_B] for j in candidates]
     )
 
-    # Similarity term theta_ij = 1 - |Delta Q_i - Delta Q_j| / 4, clipped for safety.
+    # Similarity term theta_ij = 1 - |Delta Q_i - Delta Q_j| / 4,
+    # clipped for numerical safety.
     theta = 1 - np.abs(delta_node - delta_candidates) / 4
     weights = np.clip(theta, 0, None) ** h
 
     if weights.sum() == 0:
-        return random.choice(candidates)
+        return int(random.choice(candidates))
 
     probabilities = weights / weights.sum()
     return int(np.random.choice(candidates, p=probabilities))
@@ -170,8 +184,10 @@ def _choose_random_non_neighbor(node: int, network: nx.Graph) -> int | None:
     """Select a random node that is not already connected to the focal node."""
     excluded = set(network.neighbors(node)) | {node}
     candidates = [n for n in network.nodes if n not in excluded]
+
     if not candidates:
         return None
+
     return int(random.choice(candidates))
 
 
@@ -234,8 +250,9 @@ def diffuse_narrative(
             eligible = nodes
         spreader = int(np.random.choice(eligible))
 
-    # accepted_agents records all agents who have accepted/exposed the focal narrative
-    # in this cascade. spread_queue records accepted agents waiting to become spreaders.
+    # accepted_agents records all agents who have accepted/exposed the focal
+    # narrative in this cascade. spread_queue records accepted agents waiting to
+    # become spreaders.
     accepted_agents: List[int] = [spreader]
     spread_queue: List[int] = []
 
@@ -243,7 +260,9 @@ def diffuse_narrative(
         # 1. Social feedback updates the spreader's conviction, except for zealots.
         if spreader not in all_zealots:
             reward = opinion_climate(spreader, Q, network, narrative)
-            Q[spreader, narrative] = (1 - alpha) * Q[spreader, narrative] + alpha * reward
+            Q[spreader, narrative] = (
+                (1 - alpha) * Q[spreader, narrative] + alpha * reward
+            )
 
         Q_tanh = np.tanh(Q)
         neighbors = list(network.neighbors(spreader))
@@ -252,6 +271,7 @@ def diffuse_narrative(
         newly_accepted: List[int] = []
         for receiver in neighbors:
             p_accept = adoption_probability(Q_tanh[receiver, narrative], b=b1)
+
             if np.random.rand() < p_accept and receiver not in accepted_agents:
                 newly_accepted.append(receiver)
 
@@ -317,10 +337,10 @@ def dis_information(
     """
     Backward-compatible wrapper for older scripts.
 
-    Older versions used the names ``dis_information`` and ``mali_act_*``. The current
-    manuscript uses the more general terms competing narratives and zealots. Here,
-    ``mali_act_1`` is treated as zealots for narrative A and ``mali_act_0`` as zealots
-    for narrative B.
+    Older versions used the names ``dis_information`` and ``mali_act_*``. The
+    current manuscript uses the more general terms competing narratives and zealots.
+    Here, ``mali_act_1`` is treated as zealots for narrative A and ``mali_act_0`` as
+    zealots for narrative B.
     """
     return diffuse_narrative(
         network=network,

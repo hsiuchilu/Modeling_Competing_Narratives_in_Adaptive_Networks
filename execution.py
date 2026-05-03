@@ -1,16 +1,16 @@
 """
 Simulation runner for the competing-narrative diffusion model.
 
-This file initializes agents and zealots, repeatedly calls one-cascade diffusion from
-model.py, and returns the diffusion and network-structure outcomes used in the paper.
-Variable names follow the current manuscript: narrative, adoption/exposure, zealots,
-social pressure, network adaptability, and collective attention.
+This file initializes agents and zealots, repeatedly calls one-cascade diffusion
+from model.py, and returns the diffusion and network-structure outcomes used in the
+paper. Variable names follow the current manuscript: narrative, adoption/exposure,
+zealots, social pressure, network adaptability, and collective attention.
 """
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Tuple
 import random
+from typing import Any, Dict, List, Tuple
 
 import networkx as nx
 import numpy as np
@@ -123,13 +123,18 @@ def simulate_information_cascade(
     if n_zealot_a > len(a_candidates) or n_zealot_b > len(b_candidates):
         raise ValueError("Requested more zealots than available initial supporters")
 
-    zealots_a = [int(node) for node in np.random.choice(a_candidates, n_zealot_a, replace=False)]
-    zealots_b = [int(node) for node in np.random.choice(b_candidates, n_zealot_b, replace=False)]
+    zealots_a = [
+        int(node) for node in np.random.choice(a_candidates, n_zealot_a, replace=False)
+    ]
+    zealots_b = [
+        int(node) for node in np.random.choice(b_candidates, n_zealot_b, replace=False)
+    ]
 
     # Fix zealots at extreme convictions so they persistently promote their assigned narrative.
     for node in zealots_a:
         Q[node, NARRATIVE_B] = -10
         Q[node, NARRATIVE_A] = 10
+
     for node in zealots_b:
         Q[node, NARRATIVE_A] = -10
         Q[node, NARRATIVE_B] = 10
@@ -147,9 +152,10 @@ def simulate_information_cascade(
             b2=b2,
             zealots_a=zealots_a,
             zealots_b=zealots_b,
-            c=c,  # important: use the user-supplied c rather than a hard-coded value
+            c=c,  # use the user-supplied c rather than a hard-coded value
             h=h,
         )
+
         accepted_counts.append(accepted_count)
         narratives.append(narrative)
 
@@ -160,11 +166,20 @@ def simulate_information_cascade(
     group_b = set(nodes[~final_position[nodes]])
 
     modularity = nx.community.modularity(network, [group_b, group_a])
-    nx.set_node_attributes(network, {node: float(delta_q[node]) for node in nodes}, "Q_conviction")
+
+    nx.set_node_attributes(
+        network,
+        {node: float(delta_q[node]) for node in nodes},
+        "Q_conviction",
+    )
 
     group_assortativity: Dict[str, float] = {
-        "B": nx.numeric_assortativity_coefficient(network, "Q_conviction", nodes=list(group_b)),
-        "A": nx.numeric_assortativity_coefficient(network, "Q_conviction", nodes=list(group_a)),
+        "B": nx.numeric_assortativity_coefficient(
+            network, "Q_conviction", nodes=list(group_b)
+        ),
+        "A": nx.numeric_assortativity_coefficient(
+            network, "Q_conviction", nodes=list(group_a)
+        ),
         "all": nx.numeric_assortativity_coefficient(network, "Q_conviction"),
     }
 
