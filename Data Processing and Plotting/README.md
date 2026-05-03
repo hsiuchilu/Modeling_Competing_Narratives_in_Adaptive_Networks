@@ -28,7 +28,7 @@ If you wish to audit the data aggregation process from the raw simulation output
 
 ---
 
-## Important Note on Figure 1 (Random Sampling)
+## Important Note on Figure 2 (Random Sampling)
 Please note that panels (b) through (e) in Figure 1 display individual trajectory examples randomly sampled from the simulation runs. In the original manuscript, a random seed was not explicitly set prior to this specific sampling step. 
 
 To ensure strict reproducibility moving forward, we have implemented a fixed `np.random.seed()` within the provided Jupyter Notebook. As a result, the specific trajectory examples rendered by the notebook may differ slightly from the static image in the published manuscript, but the statistical fits, overall patterns, and main conclusions remain identical.
